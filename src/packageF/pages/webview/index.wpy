@@ -1,0 +1,70 @@
+<template lang="wxml">
+  <view class="web-view-cont">
+    <web-view src="{{webviewsrc}}"/>
+    <!-- <Loading wx:else="{{!LoadingState}}" /> -->
+  </view>
+</template>
+
+<script>
+import wepy from 'wepy';
+import toast from 'cyw/Toast';
+import home from '@/api/home';
+import Loading from '@/components/loading';
+
+export default class Webview extends wepy.page {
+  config = {
+    enablePullDownRefresh: false,
+    backgroundTextStyle: 'dark',
+    onReachBottomDistance: 50,
+    navigationBarBackgroundColor: '#fff',
+    navigationBarTitleText: '外链容器',
+    navigationBarTextStyle: 'black'
+  };
+  components = {
+    toast,
+    Loading
+  };
+
+  data = {
+    webviewsrc:'',
+  };
+
+  methods = {
+
+  };
+
+  computed={
+  };
+
+  onLoad(options) {
+    this.webviewsrc = options.url;
+    this.$apply();
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+page{
+  height: 100%;
+  width: 100%;
+  .web-view-cont{
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    .share-btn{
+      position: fixed;
+      bottom:30rpx;
+      z-index:2222222;
+
+    }
+    web-view{
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+}
+</style>

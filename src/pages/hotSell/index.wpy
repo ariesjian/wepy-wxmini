@@ -1,0 +1,40 @@
+<template>
+  <view class="container_hotSell">
+
+  </view>
+</template>
+<script>
+  import wepy from 'wepy';
+  import toast from 'cyw/Toast';
+  import home from '@/api/home';
+  import Util from '@/utils/utils';
+  import GoodsLang from '@/components/GoodsLang/index';
+  import Loading from '@/components/loading';
+  export default class HotDell extends wepy.page {
+    config = {
+      enablePullDownRefresh: false,
+      backgroundTextStyle: 'dark',
+      onReachBottomDistance: 50,
+      navigationBarBackgroundColor: '#FFF',
+      navigationBarTitleText: '例子',
+      navigationBarTextStyle: 'black'
+    };
+    components = {
+      toast,
+      GoodsLang,
+      Loading
+    };
+    data = {
+
+    };
+    methods = {
+
+    };
+
+    onLoad() {
+
+    }
+</script>
+<style lang="less">
+
+</style>

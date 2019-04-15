@@ -1,0 +1,70 @@
+<style>
+ .toptips {
+  display: block;
+  position: fixed;
+  transform: translateY(-100%);
+  width: 100%;
+  min-height: 32px; /* 至少有一行的高度，保证第一次动画显示正常 */
+  top: 0;
+  line-height: 2.3;
+  font-size: 14px;
+  text-align: center;
+  color: #fff;
+  background-color: #e64340;
+  z-index: 110;
+}
+</style>
+
+<template>
+  <view animation="{{animationData}}" class="toptips" style="background-color: {{topTips.bgcolor}};"> {{ topTips.content }} </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  export default class Toptip extends wepy.component {
+
+    data = {
+      topTips: {},
+      animationData: {}
+    }
+    methods = {
+      show({ text, bgcolor='', duration=3000}) {
+        let topTips = this.topTips || {}
+        if (topTips.timer) {
+          clearTimeout(topTips.timer)
+          topTips.timer = undefined
+        }
+        // 设置定时器，定时关闭topTips
+        let timer = setTimeout(() => {
+          this.topTips.show = false
+          this.topTips.timer = undefined
+          this.toggle()
+        }, duration)
+
+        // 展示出topTips
+        this.topTips = {
+          show: true,
+          content: text,
+          bgcolor,
+          timer
+        }
+        this.toggle()
+      }
+    }
+    toggle(){
+      let animation = wepy.createAnimation({
+          duration: 400,
+          timingFunction: 'ease'
+      })
+      wx
+      .createSelectorQuery()
+      .select('.toptips')
+      .boundingClientRect(rect => {
+        this.topTips.show ? animation.translateY().step() : animation.translateY(-rect.height).step()
+        this.animationData = animation.export()
+        this.$apply()
+      })
+      .exec()
+    }
+  }
+</script>

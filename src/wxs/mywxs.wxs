@@ -1,0 +1,11 @@
+module.exports = {
+  text: 'This is from wxs',
+  filter: function (num) {
+    return num+1;
+  },
+  dataTime:function(e){
+       const hour=new Date(e).getHours();
+        const minut=new Date(e).getMinutes();
+        return (hour+":"+minut);
+  }
+};

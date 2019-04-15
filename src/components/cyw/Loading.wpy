@@ -1,0 +1,91 @@
+
+<template>
+  <view class="loading" wx:if="{{isShow}}">
+      <view class="loading__image loading__box">
+          <view class="loading__slip loading__box"></view>
+      </view>
+  </view>
+</template>
+
+<script>
+import wepy from 'wepy';
+
+export default class Loading extends wepy.component {
+  props = {
+    isShow: {
+      type: Boolean,
+      default: false
+    }
+  };
+  methods = {
+    show() {
+      var _this = this;
+
+      if (this._timer) {
+        clearTimeout(this._timer);
+      }
+      this._timer = setTimeout(function() {
+        _this._timer = null;
+        _this.isShow = true;
+        _this.$apply();
+      }, 10);
+    },
+    hide() {
+      if (this._timer) {
+        clearTimeout(this._timer);
+        this._timer = null;
+      }
+      this.isShow = false;
+    }
+  };
+}
+</script>
+
+
+<style lang="less">
+@keyframes loadingRotate {
+  0% {
+    transform: rotate(0);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.loading {
+  position: fixed;
+  display: flex;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  align-items: center;
+  align-content: center;
+  z-index: 1000;
+}
+.loading__image {
+  position: relative;
+  margin: 0 auto;
+  pointer-events: auto;
+}
+
+.loading__slip {
+  animation: loadingRotate 1050ms infinite;
+  background-image: url('../images/loading.png');
+}
+
+// .loading__box > .loading__box {
+//   position: relative;
+//   left: -150rpx;
+//   border-right: 200rpx solid transparent;
+//   -webkit-filter: drop-shadow(200rpx 0 #FEE13C);
+//   filter: drop-shadow(200rpx 0 #FEE13C);
+// }
+
+.loading__box {
+  overflow: hidden;
+  width: 200rpx;
+  height: 200rpx;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+</style>

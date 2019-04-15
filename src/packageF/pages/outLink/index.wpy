@@ -1,0 +1,93 @@
+<template lang="wxml">
+  <view class="web-view-cont">
+    <web-view wx:if="{{LoadingState}}" src="{{webviewsrc}}"/>
+    <Loading wx:else="{{!LoadingState}}" />
+  </view>
+</template>
+
+<script>
+import wepy from 'wepy';
+import toast from 'cyw/Toast';
+import home from '@/api/home';
+import Loading from '@/components/loading';
+
+export default class OutLink extends wepy.page {
+  config = {
+    enablePullDownRefresh: true,
+    backgroundTextStyle: 'dark',
+    onReachBottomDistance: 50,
+    navigationBarBackgroundColor: '#FFF',
+    navigationBarTitleText: '',
+    navigationBarTextStyle: 'black'
+  };
+
+  components = {
+    toast,
+    Loading
+  };
+
+  data = {
+    webviewsrc:'',
+    LoadingState:false,
+    isUrl:'',
+    isOrder: false
+  };
+
+  methods = {
+
+  };
+
+  computed={
+  };
+
+  onShareAppMessage(s) {
+    return {
+      title: '',
+      path: `/pages/home/index?ic=${wepy.$instance.globalData.RequestData.ic}`,
+      imageUrl: '',
+      success(s) {},
+      fail(s) {}
+    };
+  }
+
+  async onShow() {
+    const _this = this
+    let {data:{code,data:webviewsrc,msg}} = await home.goodsDetail(_this.isUrl);
+    if(code!=='0') _this.$invoke('toast', 'show', msg);
+    this.webviewsrc = webviewsrc;
+    this.LoadingState = true;
+    this.$apply();
+  }
+
+  onLoad(options) {
+    this.isUrl=options.url+'?'+options.arg+'='+options.arg2;
+    this.$apply();
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+page{
+  height: 100%;
+  width: 100%;
+  .web-view-cont{
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    .share-btn{
+      position: fixed;
+      bottom:30rpx;
+      z-index:2222222;
+
+    }
+    web-view{
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+}
+</style>

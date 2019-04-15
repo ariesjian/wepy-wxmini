@@ -1,0 +1,470 @@
+<style lang="scss" src="./styles/base.scss"></style>
+<script>
+  import wepy from 'wepy';
+  import 'wepy-async-function';
+
+  // import { setStore } from 'wepy-redux';
+  // import configStore from './store';
+  import Utils from './utils/utils.js';
+  import fetch from './utils/fetch.js';
+  import { TOKEN, EXPIRETOKEN, ISLOGIN } from '@/constant/storageKey';
+
+  // const store = configStore();
+  // setStore(store);
+  const updateManager = wx.getUpdateManager();
+  const beacon = require('./utils/beacon/beacon_weapp.js');
+  var App = require('./utils/xmadx_sdk.min.js').xmad('wepy').xmApp;
+  export default class APP extends wepy.app {
+    config = {
+      pages: ['pages/home/index', 'pages/my/index', 'pages/hotSell/index','pages/clearance/index'],
+      subPackages: [
+        {
+          root: 'packageA',
+          pages: [
+            'pages/share/index',
+          ]
+        },
+        {
+          root: 'packageC',
+          pages: [
+            'pages/qualityStore/index',
+            'pages/joinSQ/index',
+
+          ]
+        },
+        {
+          root: 'packageF',
+          pages: [
+            'pages/notice/index',
+            'pages/outLink/index',
+            'pages/webview/index'
+          ]
+        },
+        {
+          root: 'packageG',
+          pages: [
+            'pages/search/index',
+          ]
+        }
+      ],
+      window: {
+        navigationBarTextStyle: 'black',
+        navigationBarTitleText: '趣生活',
+        navigationStyle: 'custom',
+        backgroundColor: '#fff',
+        backgroundTextStyle: 'dark'
+      },
+      tabBar: {
+        color: '#707070',
+        selectedColor: '#FF4C3F',
+        backgroundColor: '#fff',
+        borderStyle: 'black',
+        list: [
+          {
+            pagePath: 'pages/home/index',
+            selectedIconPath: './images/tabbars/shop_red.png',
+            iconPath: './images/tabbars/shop_grey.png',
+            text: '首页'
+          },
+          {
+            pagePath: 'pages/hotSell/index',
+            selectedIconPath: './images/tabbars/hot_red.png',
+            iconPath: './images/tabbars/hot_grey.png',
+            text: 'two'
+          },
+          {
+            pagePath: 'pages/clearance/index',
+            selectedIconPath: './images/tabbars/off_red.png',
+            iconPath: './images/tabbars/off_grey.png',
+            text: 'three'
+          },
+          {
+            pagePath: 'pages/my/index',
+            selectedIconPath: './images/tabbars/my_red.png',
+            iconPath: './images/tabbars/my_grey.png',
+            text: '我的'
+          }
+        ]
+      },
+      networkTimeout: {
+        request: 5000,
+        downloadFile: 5000
+      },
+      navigateToMiniProgramAppIdList: [
+        //白名单id
+        'xxxxxx',
+      ]
+    };
+
+    globalData = {
+      userInfo: null, // 用户微信基本信息
+      // 接口地址
+
+      baseUrl:'https://baidu.com', //生产服接口地址
+
+      appVersion: '2.3.0',
+      source: '2001',
+      appName: 'MINI',
+      appMode: 'PROD',
+      appBundleID:'TEST_MINI',
+      WxRunData: '',
+      RequestData: '',
+      isLogin: false,
+      infoKey: '',
+      firstFlag: false,
+      ic: '',
+      isShowToast: false,
+      targetId: '',
+      recordId: '',
+      froms: '',
+      sendId: '',
+      aid: '',
+      nickname: '',
+      defaultShareData: '', // 默认分享数据（首页和好友页面）
+      wepyIsShowMsg: true, // 控制首页跑马灯消息
+      activityCode: '', // 拉新活动Code
+      height: 0, // 设备高度
+      shareData: '', // 分享数据
+    };
+
+    constructor() {
+      super();
+      const _this = this;
+      this.use('requestfix');
+      this.use('promisify');
+
+      // 拦截request请求
+      this.intercept('request', {
+        config(p) {
+          return p;
+        },
+        success(p) {
+          let {
+            data: { code },
+            statusCode
+          } = p;
+          // 2001 2002 2003 2007 2008 2009 2010
+          // if (code === '2002' || code === '2001'||code==='2003' || code === '2008' || code === '2009' || code === '2010') {
+          //   _this.goLogin();
+          // }
+          return p;
+        },
+        fail(p) {
+          console.log('request fail: ', p);
+          return p;
+        },
+        complete(p) {
+        }
+      });
+    }
+
+    goLogin(GoLogintype) {
+      const _this = this;
+      let p = new Promise((reslove, reject) => {
+        wepy
+          .login()
+          .then(async coderes => {
+            let wxlogincode = coderes.code;
+            const url = `${
+              wepy.$instance.globalData.baseUrl
+              }/small/quickLogin.do`;
+            const data = Object.assign(
+              {},
+              {
+                code: wxlogincode,
+                loginType: 32,
+                ic: wepy.$instance.globalData.ic,
+                aid: wepy.$instance.globalData.aid,
+                activityCode: wepy.$instance.globalData.activityCode || ''
+              }
+            );
+            let param = (url, data) => {
+              let obj = {
+                url: url,
+                method: 'POST',
+                data: data,
+                header: {
+                  'Content-type': 'application/x-www-form-urlencoded',
+                  'cache-control': 'no-cache',
+                  appName: wepy.$instance.globalData.appName,
+                  appVersion: wepy.$instance.globalData.appVersion,
+                  source: wepy.$instance.globalData.source,
+                  MINITYPE: 'QUSHENGHUO',
+                  appBundleID:wepy.$instance.globalData.appBundleID,
+                }
+              };
+              return obj;
+            };
+            let { data: WxloginData } = await wepy.request(param(url, data));
+            console.log(WxloginData, 'WxloginData');
+            if (WxloginData.code === '0') {
+              wepy.$instance.globalData.infoKey = WxloginData.data.infoKey || '';
+              wepy.$instance.globalData.RequestData = WxloginData.data;
+              wepy.$instance.globalData.firstFlag = WxloginData.data.firstFlag;
+              wepy.$instance.globalData.isLogin = true;
+              if (
+                !!WxloginData.data.source &&
+                ((WxloginData.data.source >= 2000 &&
+                  WxloginData.data.source <= 4999) ||
+                  WxloginData.data.source == 303 ||
+                  WxloginData.data.source == 103)
+              ) {
+                wepy.$instance.globalData.source = WxloginData.data.source;
+              } else {
+                wepy.$instance.globalData.source = 2001;
+              }
+              console.log(
+                wepy.$instance.globalData.isLogin,
+                'wepy.$instance.globalData.isLogin'
+              );
+              // wepy.$instance.globalData.ic =
+              wepy.setStorageSync('RequestData', WxloginData.data);
+              if (GoLogintype === '1') {
+                reslove(WxloginData);
+              } else {
+                try {
+                  let getRunData = await wepy.getWeRunData();
+                  wepy.$instance.globalData.WxRunData = getRunData;
+                } catch (e) {
+                  _this.checkSettingStatu(_this.goLogin, 'scope.werun');
+                  reject(e);
+                }
+              }
+            } else if (WxloginData.code === '9003') {
+              wepy.$instance.globalData.infoKey = WxloginData.data.infoKey || '';
+              const url = `${
+                wepy.$instance.globalData.baseUrl
+                }/small/setWXInfo.do`;
+              try {
+                let { code: wxlogincode } = await wepy.login();
+                let { encryptedData, iv } = await wepy.getUserInfo();
+
+                const Againdata = Object.assign(
+                  {},
+                  {
+                    encryptedData,
+                    iv,
+                    infoKey: WxloginData.data.infoKey,
+                    code: wxlogincode,
+                    loginType: 32
+                  }
+                );
+
+                let {
+                  data: { code, msg: setWXInfoMsg }
+                } = await wepy.request(param(url, Againdata));
+                // let {data:{code,msg:setWXInfoMsg}} = await wepy.request(param)
+                if (code === '0') {
+                  // console.log(setWXInfoData,'setWXInfoData')
+                  try {
+                    // let getRunData = await wepy.getWeRunData();
+                    // wepy.$instance.globalData.WxRunData = getRunData;
+
+                    let { code: wxlogincode } = await wepy.login();
+                    const url = `${
+                      wepy.$instance.globalData.baseUrl
+                      }/small/quickLogin.do`;
+                    const data = Object.assign(Againdata, {
+                      code: wxlogincode,
+                      loginType: 32,
+                      ic: wepy.$instance.globalData.ic,
+                      type: 195481,
+                      aid: wepy.$instance.globalData.aid,
+                      activityCode: wepy.$instance.globalData.activityCode || ''
+                    });
+                    let param = (url, data) => {
+                      let obj = {
+                        url: url,
+                        method: 'POST',
+                        data: data,
+                        header: {
+                          'Content-type': 'application/x-www-form-urlencoded',
+                          'cache-control': 'no-cache',
+                          appName: wepy.$instance.globalData.appName,
+                          appVersion: wepy.$instance.globalData.appVersion,
+                          source: wepy.$instance.globalData.source,
+                          appBundleID:wepy.$instance.globalData.appBundleID,
+                          MINITYPE: 'QUSHENGHUO'
+                        }
+                      };
+                      return obj;
+                    };
+                    let { data: WxloginData } = await wepy.request(
+                      param(url, data)
+                    );
+                    console.log(WxloginData, 'WxloginData');
+                    wepy.$instance.globalData.infoKey = WxloginData.data.infoKey;
+                    if (WxloginData.code === '0') {
+                      wepy.$instance.globalData.RequestData = WxloginData.data;
+                      wepy.$instance.globalData.isLogin = true;
+                      wepy.$instance.globalData.firstFlag =
+                        WxloginData.data.firstFlag;
+
+                      if (
+                        !!WxloginData.data.source &&
+                        ((WxloginData.data.source >= 2000 &&
+                          WxloginData.data.source <= 4999) ||
+                          WxloginData.data.source == 303 ||
+                          WxloginData.data.source == 103)
+                      ) {
+                        wepy.$instance.globalData.source =
+                          WxloginData.data.source;
+                      } else {
+                        wepy.$instance.globalData.source = 2001;
+                      }
+                      console.log(
+                        wepy.$instance.globalData.isLogin,
+                        'wepy.$instance.globalData.isLogin'
+                      );
+                      // wepy.$instance.globalData.ic =
+                      wepy.setStorageSync('RequestData', WxloginData.data);
+
+                      if (GoLogintype === '1') {
+                        reslove(WxloginData);
+                      } else {
+                        try {
+                          let getRunData = await wepy.getWeRunData();
+                          wepy.$instance.globalData.WxRunData = getRunData;
+                        } catch (e) {
+                          _this.checkSettingStatu(_this.goLogin, 'scope.werun');
+                          reject(e);
+                        }
+                      }
+                      reslove(WxloginData);
+                    }
+                  } catch (e) {
+                    _this.checkSettingStatu(_this.goLogin, 'scope.werun');
+                    reject(e);
+                  }
+                  reslove(WxloginData);
+                } else {
+                  wx.showToast({
+                    title: setWXInfoMsg,
+                    icon: 'none',
+                    duration: 1500
+                  });
+                }
+              } catch (e) {
+                reject(e);
+                // _this.checkSettingStatu(_this.goLogin,'scope.userInfo');
+              }
+            } else {
+              WxloginData.code === '1' ||
+              WxloginData.code === '1015' ||
+              WxloginData.code === '2'
+                ? wx.showToast({
+                  title: `${WxloginData.msg}`,
+                  icon: 'none',
+                  duration: 2000
+                })
+                : '';
+              reject(WxloginData);
+            }
+          })
+          .catch(err => {
+            reject(err);
+            console.log(err, 'err');
+          });
+      });
+      return p;
+    }
+
+    isEmptyObject(e) {
+      //对象是否为空；判断是否是第一次授权，非第一次授权且授权失败则进行提醒
+      let t;
+      for (t in e) return !1;
+      return !0;
+    }
+
+    checkSettingStatu(cb, auth) {
+      //授权处理
+      console.log(auth, 'auth');
+      let authData = auth || 'scope.werun';
+      let _this = this;
+      // 判断是否是第一次授权，非第一次授权且授权失败则进行提醒
+      wx.getSetting({
+        success: function success(res) {
+          let authSetting = res.authSetting;
+          console.log(authSetting, 'authSetting');
+          if (_this.isEmptyObject(authSetting)) {
+            console.log('首次授权');
+          } else {
+            console.log('不是第一次授权', authSetting);
+            // 没有授权的提醒 scope.werun
+            // let getSanMu = authData.length>1?(authSetting[authData[0]]===false||authSetting[authData[1]]===false):authSetting['scope.werun'] === false
+            if (authSetting[authData] === false || !authSetting[authData]) {
+              wx.showModal({
+                title: '用户未授权',
+                content: `如需正常使用此小程序功能，请您按确定并在设置页面授权${
+                  authData === 'scope.werun' ? '用户步数' : '用户信息'
+                  }`,
+                showCancel: false,
+                success: function(res) {
+                  // 此处为了用于 Android 系统区分点击蒙层关闭还是点击取消按钮关闭省去了res.confirm，res.cancel判断
+                  // 点击蒙层同样触发开启设置
+                  wx.openSetting({
+                    success: function success(res) {
+                      if (
+                        res.authSetting[authData] === false ||
+                        !authSetting[authData]
+                      ) {
+                        _this.checkSettingStatu(cb, auth);
+                      } else {
+                        _this.goLogin();
+                      }
+                    }
+                  });
+                }
+              });
+            }
+          }
+        }
+      });
+    }
+
+    onShow(data) {
+    }
+
+    /**
+     * 项目入口
+     * data-path 拼接参数&图形二维码携带参数
+     */
+    onLaunch(data) {
+      const _this = this;
+      console.log(data, 'data=====');
+      this.globalData.source = data.query.source || '2001';
+      let { ic, scene, source, activityCode } = data.query;
+      ic && (this.globalData.ic = ic);
+      source && (this.globalData.source = source);
+      activityCode && (this.globalData.activityCode = activityCode);
+      if (!!scene) {
+        scene = decodeURIComponent(scene);
+        scene.split('&').map((item, index) => {
+          this.globalData[item.split('_')[0]] = item.split('_')[1];
+        });
+      }
+
+      // 获取设备高度
+      wx.getSystemInfo({
+        success: res => {
+          console.log(res.statusBarHeight, 'statusBarHeight');
+          _this.globalData.height = res.statusBarHeight;
+        }
+      });
+
+      updateManager.onUpdateReady(function() {
+        wx.showModal({
+          title: '更新提示',
+          content: '新版本已经准备好，是否重启应用？',
+          success: function(res) {
+            if (res.confirm) {
+              // 新的版本已经下载好，调用 applyUpdate 应用新版本并重启
+              updateManager.applyUpdate();
+            }
+          }
+        });
+      });
+    }
+  }
+</script>
+

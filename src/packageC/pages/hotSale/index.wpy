@@ -1,0 +1,490 @@
+<template>
+  <view class="container">
+    <!-- 头部 -->
+    <view
+      class="headCont"
+      style="position:fixed;top:0;left:0;z-index:999;height:{{55+height}}PX;background:{{headRed?'linear-gradient(90deg,rgba(250,68,92,1) 0%,rgba(254,112,82,1) 100%);':'transparent;'}}"
+    >
+      <Header title="店铺热卖"/>
+    </view>
+    <!-- 主体 -->
+    <view class="main">
+      <view class="topCont">
+        <view class="bgWrap">
+          <view class="mask"></view>
+          <image src="{{bgImg}}" class="topBg"/>
+        </view>
+        <!-- 店铺信息 -->
+        <view class="storeWrap" style="padding-top:{{55+height}}PX;">
+          <image src="{{storeData.imgUrl}}" class="logo"/>
+          <view class="right">
+            <view class="nameWrap">
+              <view class="name">{{storeData.mallName}}</view>
+              <view class="typeBox">
+                <view class="type zhuanMai">{{storeData.merchantType}}</view>
+              </view>
+            </view>
+            <view class="detailWrap">
+              <view class="saleNum text">近30天销量：{{storeData.soldQuantity}}</view>
+              <view class="rate text">店铺佣金比率：{{(storeData.mallRate||0)/10}}%</view>
+            </view>
+          </view>
+        </view>
+        <view class="scoreWrap">
+          <!-- <repeat for="{{storeData.scores}}" key="index" index="index" item="v">
+            <view class="scoreItem">
+              <view class="title">{{v.title}}</view>
+              <view class="score">{{v.score}}</view>
+              <view class="rank">{{v.rank}}</view>
+            </view>
+          </repeat> -->
+          <view class="scoreItem">
+            <view class="title">宝贝描述</view>
+            <view class="score {{storeData.descPct>0.5?'highScore':storeData.descPct==0.5?'':'lowScore'}}">
+              {{storeData.avgDesc||0}}
+            </view>
+            <view class="rank {{storeData.descPct>0.5?'highRank':storeData.descPct==0.5?'':'lowRank'}}">
+              {{storeData.descPct>0.5?'高':storeData.descPct==0.5?'平':'低'}}
+            </view>
+          </view>
+          <view class="scoreItem">
+            <view class="title">卖家服务</view>
+            <view class="score {{storeData.servPct>0.5?'highScore':storeData.servPct==0.5?'':'lowScore'}}">
+              {{storeData.avgServ||0}}
+            </view>
+            <view class="rank {{storeData.servPct>0.5?'highRank':storeData.servPct==0.5?'':'lowRank'}}">
+              {{storeData.servPct>0.5?'高':storeData.servPct==0.5?'平':'低'}}
+            </view>
+          </view>
+          <view class="scoreItem">
+            <view class="title">物流服务</view>
+            <view class="score {{storeData.lgstPct>0.5?'highScore':storeData.lgstPct==0.5?'':'lowScore'}}">
+              {{storeData.avgLgst||0}}
+            </view>
+            <view class="rank {{storeData.lgstPct>0.5?'highRank':storeData.lgstPct==0.5?'':'lowRank'}}">
+              {{storeData.lgstPct>0.5?'高':storeData.lgstPct==0.5?'平':'低'}}
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="goodsCont">
+        <!-- 优惠券 -->
+        <!-- <view class="coupon" wx:if="{{storeData.discount && storeData.couponRemainQuantity>0}}">
+          <image src="/packageC/images/hotSale/coupon.png" class="couponImg"/>  
+          <view class="wordWrap">
+            <view class="topBox">
+              <image src="/packageC/images/hotSale/hongbao.png" class="hongbao"/>
+              <view class="couponName">全场<text class="quan">{{storeData.discount/10}}</text>折券</view>
+            </view>
+            <view class="bottomBox">
+              <view class="times">限用日期: {{storeData.couponStartTime}}-{{storeData.couponEndTime}}</view>
+              <view class="remain">剩余数量 {{storeData.couponRemainQuantity}}</view>
+            </view>
+          </view>
+        </view> -->
+
+        <!-- 商品列表 -->
+        <view class="goodsList">
+          <repeat for="{{spreadGoodsList}}" index="index" key="index" item="item">
+            <goodItemBlock :goodsItem.sync="item"/>
+          </repeat>
+        </view>
+      </view>
+
+      <!-- 返回顶部 -->
+      <view class="gotoTop" @tap.stop="goTop" wx:if="{{showTop}}">
+        <image src="/images/home/gotop.png" class="top_img"/>
+      </view>
+
+      <Loading class="myloading" wx:if="{{isShowLoading}}"/>
+    </view>
+    <toast></toast>
+  </view>
+</template>
+
+<script>
+import wepy from 'wepy';
+import home from '@/api/home';
+import Header from '@/components/Header/index';
+import Loading from '@/components/loading';
+import toast from 'cyw/Toast';
+import goodItemBlock from '@/components/Parts/goodItemBlock';
+
+export default class HotSale extends wepy.page {
+  components = {
+    Header,
+    Loading,
+    toast,
+    goodItemBlock
+  };
+
+  data = {
+    mallId: '',
+    cid: '',
+    isShowLoading: false,
+    height: wepy.$instance.globalData.height,
+    spreadGoodsList: [], 
+    storeData: {},
+    headRed: false,
+    showTop: false,
+    bgImg: ''
+  };
+  methods = {
+    goTop: () => {
+      // 一键回到顶部
+      wx.pageScrollTo({ scrollTop: 0, duration: 300 });
+    },
+    gotoCoupon(url) {
+      wx.navigateTo({
+        url:  `/packageF/pages/webview/index?url=${url}`
+      })
+    }
+  };
+  
+  onPageScroll(e) {
+    const { scrollTop } = e;
+    scrollTop >= 20 ? (this.headRed = true) : (this.headRed = false);
+    scrollTop >= 450 ? (this.showTop = true) : (this.showTop = false);
+    this.$apply();
+  }
+
+  // 格式化时间
+  FormateTime(time){
+    const d = new Date(time*1000)
+    return `
+      ${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()<10?`0${d.getDate()}`:d.getDate()}`
+  }
+  getmerchantType(data) {
+    switch (data) {
+      case 1: return '个人店';
+      case 2: return '企业店';
+      case 3: return '旗舰店';
+      case 4: return '专卖店';
+      case 5: return '专营店';
+      case 6: return '普通店';
+      default: break;
+    }
+  }
+  // 获取优质店铺详情
+  getMerchantGoods = async()=>{
+    this.isShowLoading = true;
+    this.$apply()
+    const params = {
+      cid: this.cid,
+      mallId: this.mallId
+    }
+    const { data: { data, code, msg } } = await home.getMerchantGoods(params)
+    // console.log(data,'getMerchantGoods==')
+    if (code == 0) {
+      if(data.merchantInfo){
+        data.merchantInfo.merchantType = this.getmerchantType(data.merchantInfo.merchantType)
+        data.merchantInfo.couponStartTime = this.FormateTime(data.merchantInfo.couponStartTime)
+        data.merchantInfo.couponEndTime =  this.FormateTime(data.merchantInfo.couponEndTime)
+      }
+      data.merchantInfo && (this.storeData = data.merchantInfo)
+      data.spreadGoodsList && (this.spreadGoodsList = data.spreadGoodsList)
+      const num = this.spreadGoodsList.length-1
+      this.bgImg = this.spreadGoodsList[num].imgUrl
+      this.isShowLoading = false;
+      this.$apply();
+    }else{
+      this.$invoke('toast','show',msg)
+    }
+  }
+
+  onLoad(data) {
+    const { mallId, cid } = data;
+    console.log(data)
+    mallId && (this.mallId = mallId)
+    cid && (this.cid = cid)
+    this.$apply();
+    this.getMerchantGoods()
+  }
+
+
+}
+</script>
+
+<style lang="less">
+.container {
+  width: 100%;
+  overflow: hidden;
+  .headCont {
+    width: 100%;
+  }
+  .main {
+    .topCont {
+      position: relative;
+      .bgWrap {
+        position: absolute;
+        width: 100%;
+        height: 352rpx;
+        transform: scale(1.2);
+        filter: blur(2px);
+        .mask {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5001);
+        }
+        .topBg {
+          width: 100%;
+          height: 100%;
+        }
+      }
+      .storeWrap {
+        position: relative;
+        left: 0;
+        right: 0;
+        width: 690rpx;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        padding-left: 8rpx;
+        padding-bottom: 21rpx;
+        border-bottom: 1px solid rgba(238, 238, 238, 0.2);
+        .logo {
+          width: 98rpx;
+          height: 98rpx;
+          border-radius: 6rpx;
+          background-color: #fff;
+        }
+        .right {
+          display: flex;
+          flex-direction: column;
+          margin-left: 23rpx;
+          .nameWrap {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6rpx;
+            .name {
+              margin-right: 23rpx;
+              font-size: 26rpx;
+              font-family: PingFang-SC-Bold;
+              font-weight: bold;
+              color: rgba(255, 255, 255, 1);
+              line-height: 37rpx;
+            }
+            .typeBox {
+              display: flex;
+              height: 22rpx;
+              margin-left: 10rpx;
+              .type {
+                padding: 0 9rpx;
+                margin-right: 12rpx;
+                border-radius: 2px;
+                font-size: 16rpx;
+                font-family: PingFang-SC-Heavy;
+                font-weight: 800;
+                color: rgba(255, 255, 255, 1);
+                line-height: 22rpx;
+                text-align: center;
+              }
+              .zhuanMai {
+                background: linear-gradient(
+                  270deg,
+                  rgba(224, 82, 198, 1) 0%,
+                  rgba(244, 120, 172, 1) 100%
+                );
+              }
+              .haiTao {
+                background: linear-gradient(
+                  90deg,
+                  rgba(198, 113, 255, 1) 0%,
+                  rgba(161, 80, 247, 1) 99%
+                );
+              }
+            }
+          }
+          .detailWrap {
+            display: flex;
+            .text {
+              font-size: 20rpx;
+              font-family: PingFang-SC-Bold;
+              font-weight: bold;
+              color: rgba(255, 255, 255, 1);
+              line-height: 28rpx;
+            }
+            .rate {
+              margin-left: 23rpx;
+            }
+          }
+        }
+      }
+      .scoreWrap {
+        position: relative;
+        left: 0;
+        right: 0;
+        width: 690rpx;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        padding: 20rpx 4rpx;
+        box-sizing: border-box;
+        .scoreItem {
+          display: flex;
+          align-items: center;
+          .title {
+            font-size: 24rpx;
+            font-family: PingFang-SC-Bold;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 1);
+            line-height: 33rpx;
+          }
+          .score {
+            margin:0 18rpx;
+            font-size: 24rpx;
+            font-family: PingFang-SC-Bold;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 1);
+            line-height: 33rpx;
+          }
+          .highScore {
+            color: #ff6155;
+          }
+          .lowScore {
+            color: #28ffe6;
+          }
+          .rank {
+            width: 28rpx;
+            height: 28rpx;
+            // margin-left: 10rpx;
+            // padding:0 4rpx;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(238, 238, 238, 0.2);
+            font-size: 20rpx;
+            font-family: PingFang-SC-Medium;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 1);
+            line-height: 28rpx;
+            text-align: center;
+          }
+          .highRank {
+            background: rgba(255, 76, 63, 0.195);
+            color: #ff6155;
+          }
+          .lowRank {
+            background: rgba(35, 209, 189, 0.2);
+            color: #28ffe6;
+          }
+        }
+      }
+    }
+    .goodsCont {
+      position: relative;
+      padding-top: 28rpx;
+      background: linear-gradient(
+        177deg,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(245, 245, 245, 1) 100%
+      );
+      border-radius: 22rpx 22rpx 0rpx 0rpx;
+      .coupon {
+        position: relative;
+        left: 0;
+        right: 0;
+        width: 699rpx;
+        height: 164rpx;
+        margin: 0 auto;
+        .couponImg {
+          position: absolute;
+          width: 699rpx;
+          height: 164rpx;
+        }
+        .wordWrap {
+          position: absolute;
+          width: 699rpx;
+          padding: 0 30rpx;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          .topBox {
+            // width: 431rpx;
+            height: 98rpx;
+            padding-top: 16rpx;
+            box-sizing: border-box;
+            display: flex;
+            align-items: baseline;
+            justify-content: flex-end;
+            .hongbao{
+              width: 25rpx;
+              height: 30rpx;
+              vertical-align: top;
+            }
+            .couponName {
+              margin-left: 16rpx;
+              font-size:28rpx;
+              font-family:PingFangSC-Medium;
+              font-weight:500;
+              color:rgba(248,77,72,1);
+              line-height:40rpx;
+              .quan{
+                font-size:46rpx;
+                font-family:PingFangSC-Medium;
+                font-weight:500;
+                color:rgba(248,77,72,1);
+                line-height:65rpx;
+              }
+            }
+          }
+          .bottomBox {
+            // width: 200rpx;
+            height: 64rpx;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            .times {
+              margin-top: 2rpx;
+              font-size:20rpx;
+              font-family:PingFangSC-Regular;
+              font-weight:400;
+              color:rgba(173,173,173,1);
+              line-height:28rpx;
+            }
+            .remain {
+              font-size:20rpx;
+              font-family:PingFangSC-Regular;
+              font-weight:400;
+              color:rgba(102,102,102,1);
+              line-height:28rpx;
+            }
+          }
+        }
+      }
+      .goodsList {
+        width: 700rpx;
+        height: auto;
+        padding-top: 12rpx;
+        margin-left: 25rpx;
+        padding-bottom: 16rpx;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
+      }
+    }
+    .gotoTop {
+      width: 82rpx;
+      height: 82rpx;
+      position: fixed;
+      bottom: 88rpx;
+      right: 33rpx;
+      z-index: 7;
+      .top_img {
+        width: 82rpx;
+        height: 82rpx;
+      }
+    }
+  }
+}
+.myloading {
+  position: fixed;
+  left: 45%;
+  top: 48%;
+  z-index: 99;
+}
+</style>

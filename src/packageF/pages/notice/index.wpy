@@ -1,0 +1,288 @@
+<template>
+  <view class="container">
+    <Header title="系统通知" styles="position:fixed;top:0;left:0;z-index:22;background:#fff;" backImag="2" titleColor="#3F3F3F"/>
+    <view class="content" style="padding-top:{{height+55}}PX;" wx:if="{{noticeDate && noticeDate.length>0 }}">
+    美丽
+    </view>
+    <view class="none" wx:if="{{noticeDate && noticeDate.length == 0 && isTrue}}">
+      <view class="null_pic">
+        <image src="../../images/null.png"/>
+      </view>
+      <view class="text_null">暂无公告哦</view>
+    </view>
+    <toast/>
+  </view>
+</template>
+<script>
+import wepy from 'wepy';
+import Util from '@/utils/utils.js';
+import Tips from '@/utils/tips';
+import Loading from '@/components/loading';
+import home from '@/api/home';
+import toast from 'cyw/Toast';
+import Header from '@/components/Header/index';
+
+export default class Notice extends wepy.page {
+  config = {
+    enablePullDownRefresh: false,
+    backgroundTextStyle: 'dark',
+    onReachBottomDistance: 50,
+    navigationBarBackgroundColor: '#fff',
+    navigationBarTitleText: '趣生活公告',
+    navigationBarTextStyle: 'black'
+  };
+
+  components = {
+    Loading,
+    toast,
+    Header
+  };
+
+  data = {
+    HtabCont: '500',
+    currentPage: 1,
+    pageSize: 10,
+    noticeDate: [],
+    hasMore: false,
+    isTrue: false,
+    height: 0
+  };
+
+  methods = {
+    goOther: (flag, url, type) => {
+      console.log(flag, url, type);
+      if (flag === 2) {
+        // 跳转内部部
+        switch (type) {
+          case 0: // 跳转到首页
+            wx.switchTab({
+              url: '/pages/pages/home/index'
+            });
+            break;
+          // case 1:  // 跳转到拉新
+          //   wx.navigateTo({
+          //     url: '../../pages/laXin/index'
+          //   });
+          //   break;
+          case 2: // 跳转到砍币
+            wx.navigateTo({
+              url: '../../pages/kanBi/index'
+            });
+            break;
+          default:
+            break;
+        }
+      } else if (flag === 1) {
+        // 跳转外部
+        let res = url;
+        // console.log('http://test.91quzou.com/dsfMall/getDSFMallLoginUrl.do?redirect=https%3A%2F%2Fgoods.m.duiba.com.cn%2Fbutton%2Fclassify%3Fid%3D4906%26dbnewopen');
+        const urlsT = res.split('?')[0];
+        const urlsW = res.split('?')[1];
+        const urlsZ = res.split('?')[1].split('=')[1];
+        wx.navigateTo({
+          url:
+            '../../pages/outLink/index?url=' +
+            urlsT +
+            '&arg=' +
+            urlsW +
+            '&arg2=' +
+            urlsZ
+        });
+      }
+    }
+  };
+
+  async onReachBottom() {
+    this.currentPage += 1;
+    this.$apply();
+    if (this.hasMore) {
+      wx.showLoading({
+        title: '加载中'
+      });
+      let {
+        data: { code, data, msg }
+      } = await home.noticeList({ currentPage: this.currentPage });
+      wx.hideLoading();
+      if (code === '0') {
+        const noticeDates = data.items;
+        this.noticeDate = this.noticeDate.concat(noticeDates);
+        this.hasMore = data.hasMore;
+        this.currentPage = data.currentPage;
+        this.$apply();
+      } else {
+        this.$invoke('toast', 'show', `${msg}`, 'bottom');
+      }
+    } else {
+      this.$invoke('toast', 'show', `已经到底了~~`, 'bottom');
+    }
+  }
+  // 获取第一页数据
+  getFirstPage = async () => {
+    // 获取第一页数据
+    wx.showLoading({
+      title: '加载中'
+    });
+    let {
+      data: { code, data, msg }
+    } = await home.noticeList();
+    wx.hideLoading();
+    if (code === '0') {
+      this.isTrue = true;
+      this.noticeDate = data.items;
+      this.hasMore = data.hasMore;
+      this.currentPage = data.currentPage;
+      this.$apply();
+      console.log(this.noticeDate, '----');
+    } else {
+      this.$invoke('toast', 'show', `${msg}`, 'bottom');
+    }
+  };
+
+  onLoad() {
+    this.height = wepy.$instance.globalData.height;
+    this.HtabCont = wx.getSystemInfoSync().windowHeight - this.height;
+    console.log(wx.getSystemInfoSync().windowHeight);
+    this.$apply();
+    this.getFirstPage();
+  }
+}
+</script>
+<style lang="scss">
+.container {
+  width: 750rpx;
+  height: 100%;
+  background: rgba(255, 255, 255, 1);
+  .content {
+    width: 750rpx;
+    min-height: 100vh;
+    .item {
+      width: 710rpx;
+      height: 359rpx;
+      margin-left: 20rpx;
+      position: relative;
+      .bg {
+        width: 710rpx;
+        height: 359rpx;
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+      .list {
+        width: 710rpx;
+        height: 359rpx;
+        position: absolute;
+        left: 0;
+        top: 0;
+        .title {
+          width: 626rpx;
+          height: 50rpx;
+          font-size: 30rpx;
+          font-family: PingFangSC-Medium;
+          font-weight: 500;
+          color: rgba(73, 76, 111, 1);
+          line-height: 50rpx;
+          text-align: left;
+          margin-top: 24rpx;
+          margin-left: 40rpx;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .desc {
+          width: 626rpx;
+          height: 185rpx;
+          font-size: 26rpx;
+          margin-left: 40rpx;
+          font-family: PingFangSC-Regular;
+          font-weight: 400;
+          color: rgba(140, 144, 180, 0.7);
+          line-height: 38rpx;
+          text-align: left;
+          display: -webkit-box;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          word-break: break-all;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 5;
+          margin-top: 16rpx;
+        }
+        .desc_wrap {
+          width: 626rpx;
+          height: 30rpx;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          .time {
+            // width: 626rpx;
+            height: 30rpx;
+            font-size: 22rpx;
+            font-family: PingFangSC-Regular;
+            font-weight: 400;
+            color: rgba(140, 144, 180, 0.6);
+            line-height: 30rpx;
+            margin-top: 5rpx;
+            text-align: left;
+            margin-left: 40rpx;
+          }
+          .more {
+            // width: 118rpx;
+            height: 30rpx;
+            display: flex;
+            // margin-left: 12rpx;
+            align-items: center;
+            flex-wrap: nowrap;
+            .text {
+              width: 88rpx;
+              height: 30rpx;
+              font-size: 22rpx;
+              font-family: PingFangSC-Regular;
+              font-weight: 400;
+              color: rgba(103, 184, 255, 1);
+              line-height: 30rpx;
+            }
+            .src {
+              margin-left: 10rpx;
+              width: 20rpx;
+              height: 20rpx;
+              image {
+                width: 20rpx;
+                height: 20rpx;
+                vertical-align: top;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  .none {
+    margin-top: 106rpx;
+    width: inherit;
+    .null_pic {
+      width: 375rpx;
+      height: 250rpx;
+      margin-left: 188rpx;
+      image {
+        width: 375rpx;
+        height: 250rpx;
+      }
+    }
+    .text_null {
+      width: inherit;
+      height: 45rpx;
+      font-size: 32rpx;
+      font-family: PingFangSC-Regular;
+      font-weight: 400;
+      color: rgba(73, 76, 111, 0.65);
+      line-height: 45rpx;
+      text-align: center;
+      margin-top: 58rpx;
+    }
+  }
+  ::-webkit-scrollbar {
+    width: 0rpx;
+    height: 0rpx;
+  }
+}
+</style>
+

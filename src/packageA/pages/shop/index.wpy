@@ -1,0 +1,118 @@
+<template lang="wxml">
+  <view class="web-view-cont">
+    <web-view wx:if="{{LoadingState}}" src="{{webviewsrc}}"/>
+    <Loading wx:else="{{!LoadingState}}" />
+    <!-- <view class="share-btn">附表</view> -->
+  </view>
+</template>
+
+<script>
+import wepy from 'wepy';
+import toast from 'cyw/Toast';
+import home from '@/api/home';
+import Loading from '@/components/loading';
+
+export default class Shop extends wepy.page {
+  config = {
+    enablePullDownRefresh: true,
+    backgroundTextStyle: 'dark',
+    onReachBottomDistance: 50,
+    navigationBarBackgroundColor: '#FFF',
+    navigationBarTitleText: '',
+    navigationBarTextStyle: 'black'
+  };
+
+  components = {
+    toast,
+    Loading
+  };
+
+  data = {
+    webviewsrc:'',
+    LoadingState:false,
+    isUrl:'',
+    isOrder: false
+  };
+
+  methods = {
+
+  };
+
+  computed={
+    isLogin(){
+      return wepy.$instance.globalData.isLogin
+    }
+  }
+
+  onShareAppMessage(s) {
+    return {
+      title: '',
+      path: `/pages/home/index?ic=${wepy.$instance.globalData.RequestData.ic}`,
+      imageUrl: '',
+      success(s) {},
+      fail(s) {}
+    };
+  }
+
+  async onShow() {
+    let _this=this;
+    if(_this.isUrl == ''){
+      if(!_this.isOrder){ // 商城页面
+        let {data:{code,data:webviewsrc,msg}} = await home.getDSFMallLoginUrl()
+        if(code!=='0') _this.$invoke('toast', 'show', msg);
+        // console.log(webviewsrc.replace('https://www.duiba.com.cn','https://home.m.duiba.com.cn'),'webviewsrc')
+        _this.webviewsrc = webviewsrc
+      }else{ // 订单页面
+        let {data:{code,data:webviewsrc,msg}} = await home.getDSFMallLoginUrl({type: 1024})
+        if(code!=='0') _this.$invoke('toast', 'show', msg);
+        _this.webviewsrc = webviewsrc
+      }
+    }else{ // 商品详情或其他页面（疯狂抽奖）
+      let {data:{code,data:webviewsrc,msg}} = await home.goodsDetail(_this.isUrl)
+      if(code!=='0') _this.$invoke('toast', 'show', msg);
+      _this.webviewsrc = webviewsrc
+    }
+    this.LoadingState = true;
+    this.$apply();
+  }
+
+  onLoad(options) {
+    console.log(options,'shop================================')
+    this.isUrl= (options.arg == undefined || options.from == 'order')?'':(options.url+'?'+options.arg+'='+options.arg2);
+    if(options.from == 'order'){
+      this.isOrder = true;
+      this.$apply();
+    }else{
+      this.isOrder = false;
+      this.$apply();
+    }
+    this.$apply();
+    }
+}
+</script>
+
+<style lang="scss" scoped>
+page{
+  height: 100%;
+  width: 100%;
+  .web-view-cont{
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    .share-btn{
+      position: fixed;
+      bottom:30rpx;
+      z-index:2222222;
+
+    }
+    web-view{
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+}
+</style>
